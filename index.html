@@ -1,336 +1,71 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小智写作练习室 - 自动批改版</title>
+    <meta charset="UTF-8"><title>托福写作练习室</title>
     <script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.19/libs/cn/index.js"></script>
     <style>
-        :root {
-            --primary-color: #4a90e2;
-            --bg-color: #f5f7fa;
-            --card-bg: #ffffff;
-            --text-color: #333;
-            --danger-color: #e74c3c;
-            --overtime-color: #c0392b;
-            --success-color: #2ecc71;
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1000px; 
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
-        }
-
-        .timer-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        input[type="number"] {
-            width: 60px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-            color: white;
-        }
-
-        .btn-start { background-color: var(--primary-color); }
-        .btn-start:hover { background-color: #357abd; }
-        .btn-reset { background-color: var(--danger-color); }
-        .btn-reset:hover { background-color: #c0392b; }
-
-        .btn-submit {
-            background-color: var(--success-color);
-            font-size: 16px;
-            padding: 10px 24px;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-submit:hover { background-color: #27ae60; }
-
-        .timer-display {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            font-variant-numeric: tabular-nums;
-            min-width: 180px;
-            text-align: right;
-        }
-
-        .timer-warning { color: var(--danger-color); animation: pulse 1s infinite; }
-        .timer-overtime { color: var(--overtime-color); text-shadow: 0 0 2px rgba(192, 57, 43, 0.2); }
-
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #555;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .question-area {
-            margin-bottom: 25px;
-            border: 2px dashed #ddd;
-            padding: 15px;
-            border-radius: 8px;
-            background: #fafafa;
-            position: relative;
-            transition: border-color 0.3s;
-            display: flex;          
-            flex-direction: column; 
-            min-height: 100px;      
-            max-height: 50vh;       
-            overflow-y: auto;       
-        }
-        
-        .question-area:focus-within { border-color: var(--primary-color); }
-
-        .question-input {
-            width: 100%;
-            flex: 0 1 auto;         
-            min-height: 40px;      
-            border: none;
-            background: transparent;
-            resize: vertical;       
-            font-size: 16px;
-            outline: none;
-            font-family: inherit;
-            line-height: 1.5;
-            overflow: hidden;       
-            margin-bottom: 10px;    
-        }
-
-        .image-preview {
-            width: 100%;       
-            height: auto;      
-            display: none;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border: 1px solid #eee;
-            display: block;    
-        }
-
-        .upload-btn-wrapper { position: relative; }
-        .upload-label {
-            background: #fff;
-            border: 1px solid #ccc;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            color: #333;
-        }
-
-        .answer-area { position: relative; display: flex; flex-direction: column; }
-        textarea.answer-input {
-            width: 100%;
-            height: 300px;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 18px;
-            line-height: 1.6;
-            resize: vertical;
-            box-sizing: border-box;
-            font-family: 'Times New Roman', serif;
-        }
-
-        .footer-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-        }
-
-        .word-count { font-size: 0.9rem; color: #666; }
-        .word-count span { font-weight: bold; color: var(--primary-color); }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
+        :root { --p: #4a90e2; --s: #2ecc71; }
+        body { font-family: sans-serif; background: #f5f7fa; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 900px; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .timer-box { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 10px; }
+        #timerDisplay { font-size: 2rem; font-weight: bold; color: var(--p); }
+        textarea { width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 18px; box-sizing: border-box; }
+        #answerInput { height: 350px; font-family: 'Times New Roman', serif; margin-top: 10px; }
+        .btn-submit { background: var(--s); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 18px; cursor: pointer; margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <div class="header">
-        <div class="timer-controls">
-            <label>设置时间(分钟):</label>
-            <input type="number" id="timeInput" value="10" min="1" max="180">
-            <button class="btn-start" onclick="toggleTimer()" id="startBtn">开始计时</button>
-            <button class="btn-reset" onclick="resetTimer()">重置</button>
-        </div>
-        <div class="timer-display" id="timerDisplay">10:00</div>
+    <div class="timer-box">
+        <div>时间: <input type="number" id="timeInput" value="10" style="width:40px"> 分 
+        <button onclick="startTimer()" id="sBtn" style="background:var(--p);color:white;border:none;padding:5px 10px;border-radius:4px;">开始计时</button></div>
+        <div id="timerDisplay">10:00</div>
     </div>
-
-    <div class="section-title">
-        题目栏 (支持截图 Ctrl+V 粘贴)
-        <div class="upload-btn-wrapper">
-            <label for="imgUpload" class="upload-label">📂 选图片文件</label>
-            <input type="file" id="imgUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
-        </div>
-    </div>
-    <div class="question-area" id="questionArea">
-        <textarea class="question-input" id="questionTextInput" rows="1" placeholder="在此处粘贴题目文本..."></textarea>
-        <img id="previewImg" class="image-preview" style="display:none;" alt="题目图片">
-    </div>
-
-    <div class="section-title">作答区 (写完后复制内容发送给右下角 AI)</div>
-    <div class="answer-area">
-        <textarea class="answer-input" id="answerInput" placeholder="开始你的写作练习..." oninput="updateWordCount()"></textarea>
-        <div class="footer-controls">
-            <div class="word-count">当前字数: <span id="wordCount">0</span></div>
-            <button class="btn-submit" onclick="exportToDoc()">📥 导出并下载</button>
-        </div>
-    </div>
+    <textarea id="answerInput" placeholder="在此写作文...写完点绿色按钮，会自动下载并复制作文。"></textarea>
+    <button class="btn-submit" onclick="doExport()">📥 导出并下载作文 (自动复制作文内容)</button>
 </div>
 
 <script>
+  // 1. AI 嵌入 - 请替换成你刚才在“安装”里看到的真实 token
   new CozeWebSDK.WebChatClient({
-    config: {
-      bot_id: '7616762350431256595',
-    },
-    componentProps: {
-      title: '托福作文批改君',
-    },
-    auth: {
-      type: 'token',
-      token: 'pat_********', // 此处已保留你原来的 token
-      onRefreshToken: function () {
-        return 'pat_********'
-      }
+    config: { bot_id: '7616762350431256595' },
+    componentProps: { title: '托福批改专家' },
+    auth: { 
+      type: 'token', 
+      token: '这里填入你刚才复制的那个pat_开头的长字符串', 
+      onRefreshToken: function () { return '这里再填一次那个pat_开头的长字符串' } 
     }
   });
-</script>
 
-<script>
-    // --- 原有逻辑保留 ---
-    function autoResizeTextarea(element) {
-        element.style.height = 'auto'; 
-        element.style.height = element.scrollHeight + 'px'; 
-    }
+  // 2. 导出下载逻辑 (核心修复)
+  function doExport() {
+      const txt = document.getElementById('answerInput').value;
+      if(!txt) return alert("内容为空！");
+      
+      // 自动复制
+      navigator.clipboard.writeText(txt).then(() => {
+          alert("✅ 已复制作文！\n\n文档已开始下载。下载完点右下角机器人直接粘贴。");
+      });
 
-    const questionInput = document.getElementById('questionTextInput');
-    questionInput.addEventListener('input', function() { autoResizeTextarea(this); });
-    questionInput.addEventListener('paste', function() { setTimeout(() => autoResizeTextarea(this), 0); });
+      // 真正执行下载
+      const blob = new Blob(['\ufeff', '<html><meta charset="utf-8"><body>' + txt.replace(/\n/g, '<br>') + '</body></html>'], { type: 'application/msword' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = "TOEFL_Practice.doc";
+      a.click();
+  }
 
-    let timerInterval;
-    let totalSeconds = 600; 
-    let overtimeSeconds = 0; 
-    let isRunning = false;
-    let isOvertime = false; 
-    let hasStarted = false; 
-
-    function formatTime(sec) {
-        const minutes = Math.floor(sec / 60);
-        const seconds = sec % 60;
-        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
-
-    function toggleTimer() {
-        const startBtn = document.getElementById('startBtn');
-        const timeInput = document.getElementById('timeInput');
-        if (isRunning) {
-            clearInterval(timerInterval);
-            startBtn.textContent = "继续计时";
-            startBtn.style.backgroundColor = "#f39c12"; 
-            isRunning = false;
-        } else {
-            if (startBtn.textContent === "开始计时") {
-                totalSeconds = parseInt(timeInput.value) * 60;
-                overtimeSeconds = 0;
-                isOvertime = false;
-                hasStarted = true;
-            }
-            startBtn.textContent = "暂停计时";
-            startBtn.style.backgroundColor = "#e74c3c"; 
-            isRunning = true;
-            timerInterval = setInterval(() => {
-                if (totalSeconds > 0) { totalSeconds--; } 
-                else { isOvertime = true; overtimeSeconds++; }
-                updateDisplay();
-            }, 1000);
-        }
-    }
-
-    function resetTimer() {
-        clearInterval(timerInterval);
-        isRunning = false;
-        isOvertime = false;
-        overtimeSeconds = 0;
-        hasStarted = false;
-        document.getElementById('startBtn').textContent = "开始计时";
-        document.getElementById('startBtn').style.backgroundColor = "";
-        totalSeconds = parseInt(document.getElementById('timeInput').value) * 60;
-        updateDisplay();
-    }
-
-    function updateDisplay() {
-        const display = document.getElementById('timerDisplay');
-        if (!isOvertime) {
-            display.textContent = formatTime(totalSeconds);
-            display.className = totalSeconds < 60 && totalSeconds > 0 ? 'timer-display timer-warning' : 'timer-display';
-        } else {
-            display.textContent = "+ " + formatTime(overtimeSeconds);
-            display.className = 'timer-display timer-overtime';
-        }
-    }
-
-    function updateWordCount() {
-        const text = document.getElementById('answerInput').value;
-        const count = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-        document.getElementById('wordCount').textContent = count;
-    }
-
-    function exportToDoc() {
-        const topicText = document.getElementById('questionTextInput').value || "未填写题目";
-        const answerText = document.getElementById('answerInput').value || "未填写作答";
-        const wordCount = document.getElementById('wordCount').textContent;
-        alert("正在导出... 请复制你的作文发给 AI 进行批改哦！");
-        // 此处保留你原有的 Blob 导出逻辑即可（由于代码量大，此处简略）
-        // ... 原有的导出 HTML 内容代码 ...
-    }
+  // 计时器
+  let t, sec = 600;
+  function startTimer() {
+      sec = document.getElementById('timeInput').value * 60;
+      t = setInterval(() => { 
+          sec--; 
+          document.getElementById('timerDisplay').innerText = Math.floor(sec/60) + ":" + String(sec%60).padStart(2,'0');
+          if(sec <= 0) clearInterval(t);
+      }, 1000);
+      document.getElementById('sBtn').disabled = true;
+  }
 </script>
 </body>
 </html>
