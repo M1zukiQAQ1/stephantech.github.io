@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>小智写作练习室 - 批改增强版</title>
+<title>小智写作练习室 - 完美全功能版</title>
 <style>
-    /* 完整保留你的原始精美 CSS */
     :root {
         --primary-color: #4a90e2;
         --bg-color: #f5f7fa;
@@ -20,143 +19,52 @@
         font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         background-color: var(--bg-color);
         color: var(--text-color);
-        margin: 0;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 100vh;
+        margin: 0; padding: 20px;
+        display: flex; flex-direction: column; align-items: center; min-height: 100vh;
     }
 
     .container {
-        width: 100%;
-        max-width: 1000px; 
-        background: var(--card-bg);
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        width: 100%; max-width: 1000px; background: var(--card-bg);
+        padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
 
     .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #eee;
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #eee;
     }
 
-    .timer-controls {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
+    .timer-controls { display: flex; align-items: center; gap: 10px; }
+    input[type="number"] { width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
 
-    input[type="number"] {
-        width: 60px;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 16px;
-    }
-
-    button {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background 0.2s;
-        color: white;
-    }
-
+    button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s; color: white; }
     .btn-start { background-color: var(--primary-color); }
     .btn-reset { background-color: var(--danger-color); }
+    .btn-submit { background-color: var(--success-color); font-size: 16px; padding: 10px 24px; margin-top: 15px; display: flex; align-items: center; gap: 8px; }
+    .btn-ai { background-color: #6a67ce; font-size: 16px; padding: 10px 24px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: white; border-radius: 6px; font-weight: bold; }
 
-    .btn-submit {
-        background-color: var(--success-color);
-        font-size: 16px;
-        padding: 10px 24px;
-        margin-top: 15px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
+    .timer-display { font-size: 2.5rem; font-weight: bold; color: var(--primary-color); min-width: 180px; text-align: right; }
+    .timer-warning { color: var(--danger-color); animation: pulse 1s infinite; }
+    .timer-overtime { color: var(--overtime-color); }
 
-    /* 新增：去批改按钮样式 */
-    .btn-ai {
-        background-color: #6a67ce;
-        font-size: 16px;
-        padding: 10px 24px;
-        margin-top: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        text-decoration: none;
-        color: white;
-        border-radius: 6px;
-        font-weight: bold;
-    }
-
-    .timer-display {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: var(--primary-color);
-        min-width: 180px;
-        text-align: right;
-    }
-
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: bold;
-        margin: 20px 0 10px;
-        color: #555;
-    }
+    .section-title { font-size: 1.1rem; font-weight: bold; margin: 20px 0 10px; color: #555; display: flex; justify-content: space-between; }
 
     .question-area {
-        margin-bottom: 25px;
-        border: 2px dashed #ddd;
-        padding: 15px;
-        border-radius: 8px;
-        background: #fafafa;
+        margin-bottom: 25px; border: 2px dashed #ddd; padding: 15px; border-radius: 8px; background: #fafafa;
+        position: relative; transition: border-color 0.3s; display: flex; flex-direction: column; 
+        min-height: 100px; max-height: 50vh; overflow-y: auto;
     }
+    .question-area:focus-within { border-color: var(--primary-color); }
+    .question-input { width: 100%; border: none; background: transparent; font-size: 16px; outline: none; line-height: 1.5; resize: vertical; }
 
-    .question-input {
-        width: 100%;
-        border: none;
-        background: transparent;
-        font-size: 16px;
-        outline: none;
-        resize: vertical;
-    }
+    .image-preview { width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #eee; margin-top: 10px; display: none; }
+    .upload-btn-wrapper { position: relative; }
+    .upload-label { background: #fff; border: 1px solid #ccc; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; color: #333; }
 
-    textarea.answer-input {
-        width: 100%;
-        height: 300px;
-        padding: 15px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        font-size: 18px;
-        line-height: 1.6;
-        font-family: 'Times New Roman', serif;
-        box-sizing: border-box;
-    }
-
-    .footer-controls {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        margin-top: 10px;
-    }
-
+    textarea.answer-input { width: 100%; height: 300px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 18px; line-height: 1.6; font-family: 'Times New Roman', serif; box-sizing: border-box; }
+    .footer-controls { display: flex; flex-direction: column; align-items: flex-end; margin-top: 10px; }
     .word-count { font-size: 0.9rem; color: #666; margin-bottom: 10px; }
 
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.6; }
-        100% { opacity: 1; }
-    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 </style>
 </head>
 <body>
@@ -165,51 +73,53 @@
     <div class="header">
         <div class="timer-controls">
             <label>设置时间(分钟):</label>
-            <input type="number" id="timeInput" value="10">
+            <input type="number" id="timeInput" value="10" min="1">
             <button class="btn-start" onclick="toggleTimer()" id="startBtn">开始计时</button>
             <button class="btn-reset" onclick="resetTimer()">重置</button>
         </div>
         <div class="timer-display" id="timerDisplay">10:00</div>
     </div>
 
-    <div class="section-title">题目栏</div>
-    <div class="question-area">
-        <textarea class="question-input" id="qTextInput" rows="2" placeholder="粘贴题目文本..."></textarea>
+    <div class="section-title">
+        题目栏 (支持截图 Ctrl+V 或选图片)
+        <div class="upload-btn-wrapper">
+            <label for="imgUpload" class="upload-label">📂 选图片文件</label>
+            <input type="file" id="imgUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+        </div>
+    </div>
+    <div class="question-area" id="questionArea">
+        <textarea class="question-input" id="qTextInput" rows="2" placeholder="在此粘贴题目文本，或 Ctrl+V 粘贴截图..."></textarea>
+        <img id="previewImg" class="image-preview" alt="题目图片">
     </div>
 
-    <div class="section-title">作答区</div>
+    <div class="section-title">作答区 (下载后自动复制作文)</div>
     <div class="answer-area">
-        <textarea class="answer-input" id="answerInput" placeholder="开始写作..." oninput="updateWordCount()"></textarea>
-        
+        <textarea class="answer-input" id="answerInput" placeholder="开始你的写作..." oninput="updateWordCount()"></textarea>
         <div class="footer-controls">
             <div class="word-count">当前字数: <span id="wordCount">0</span></div>
-            <button class="btn-submit" onclick="exportAndCopy()">
-                📥 提交并下载文档 (自动复制)
-            </button>
-            <a href="https://doubao.com/bot/vy4SxUh5" target="_blank" class="btn-ai">
-                🤖 去豆包 AI 自动批改
-            </a>
+            <button class="btn-submit" onclick="exportAndCopy()">📥 提交并下载文档 (自动复制)</button>
+            <a href="https://doubao.com/bot/vy4SxUh5" target="_blank" class="btn-ai">🤖 去豆包 AI 自动批改</a>
         </div>
     </div>
 </div>
 
 <script>
-    let timer, total = 600, isRunning = false;
+    let timer, totalSeconds = 600, isRunning = false;
 
-    function formatTime(s) {
-        return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    function formatTime(sec) {
+        return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
     }
 
     function toggleTimer() {
         const btn = document.getElementById('startBtn');
-        if(isRunning) {
-            clearInterval(timer); isRunning = false; btn.textContent = "继续";
+        if (isRunning) {
+            clearInterval(timer); isRunning = false; btn.textContent = "继续计时";
         } else {
-            if(btn.textContent === "开始计时") total = document.getElementById('timeInput').value * 60;
-            isRunning = true; btn.textContent = "暂停";
+            if (btn.textContent === "开始计时") totalSeconds = document.getElementById('timeInput').value * 60;
+            isRunning = true; btn.textContent = "暂停计时";
             timer = setInterval(() => {
-                total--; document.getElementById('timerDisplay').textContent = formatTime(total);
-                if(total <= 0) clearInterval(timer);
+                totalSeconds--; document.getElementById('timerDisplay').textContent = formatTime(totalSeconds);
+                if (totalSeconds <= 0) { clearInterval(timer); isRunning = false; }
             }, 1000);
         }
     }
@@ -217,8 +127,8 @@
     function resetTimer() {
         clearInterval(timer); isRunning = false;
         document.getElementById('startBtn').textContent = "开始计时";
-        total = document.getElementById('timeInput').value * 60;
-        document.getElementById('timerDisplay').textContent = formatTime(total);
+        totalSeconds = document.getElementById('timeInput').value * 60;
+        document.getElementById('timerDisplay').textContent = formatTime(totalSeconds);
     }
 
     function updateWordCount() {
@@ -226,23 +136,50 @@
         document.getElementById('wordCount').textContent = txt === '' ? 0 : txt.split(/\s+/).length;
     }
 
-    // 核心修复逻辑
+    // 图片上传与粘贴逻辑
+    function handleImageUpload(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => { const img = document.getElementById('previewImg'); img.src = e.target.result; img.style.display = 'block'; };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    document.getElementById('qTextInput').addEventListener('paste', function(e) {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let i in items) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (ev) => { const img = document.getElementById('previewImg'); img.src = ev.target.result; img.style.display = 'block'; };
+                reader.readAsDataURL(blob);
+            }
+        }
+    });
+
+    // 核心下载逻辑
     function exportAndCopy() {
         const txt = document.getElementById('answerInput').value;
-        if(!txt) { alert("还没写内容哦！"); return; }
+        if (!txt) { alert("内容为空！"); return; }
+        navigator.clipboard.writeText(txt).then(() => { alert("✅ 内容已自动复制！\n\n请点击下方紫色按钮去豆包直接粘贴。"); });
 
-        // 1. 自动复制到剪贴板
-        navigator.clipboard.writeText(txt).then(() => {
-            alert("✅ 内容已自动复制到剪贴板！\n\n文档已下载，请点击下方紫色按钮去豆包直接粘贴批改。");
-        });
+        const topic = document.getElementById('qTextInput').value || "未填写题目";
+        const img = document.getElementById('previewImg');
+        const hasImg = img.style.display === 'block';
 
-        // 2. 导出 Word
-        const html = `<html><meta charset="utf-8"><body><h2 style="text-align:center">Writing Practice</h2><p>${txt.replace(/\n/g, '<br>')}</p></body></html>`;
+        const html = `<html><meta charset="utf-8"><body>
+            <h2 style="color:#4a90e2;">TOEFL Practice Report</h2>
+            <p><b>Topic:</b> ${topic}</p>
+            ${hasImg ? `<img src="${img.src}" width="400"><br>` : ''}
+            <hr><h3>Content:</h3><p>${txt.replace(/\n/g, '<br>')}</p>
+        </body></html>`;
+
         const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = "TOEFL_Practice.doc";
-        link.click();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `TOEFL_Practice.doc`;
+        a.click();
     }
 </script>
 </body>
