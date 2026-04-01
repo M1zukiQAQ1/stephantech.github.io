@@ -9,6 +9,9 @@ const questionText = ref("");
 const answerText = ref("");
 const imagePreview = ref("");
 const answerTextarea = ref(null);
+const toField = ref("");
+const subjectField = ref("");
+const showWordCount = ref(true);
 
 let timerId = null;
 
@@ -37,10 +40,8 @@ const formattedTimer = computed(() => {
 });
 
 const startButtonText = computed(() => {
-  if (isRunning.value) {
-    return "暂停计时";
-  }
-  return hasStarted.value ? "继续计时" : "开始计时";
+  if (isRunning.value) return "Pause";
+  return hasStarted.value ? "Resume" : "Start";
 });
 
 const wordCount = computed(() => {
@@ -64,12 +65,10 @@ const toggleTimer = () => {
     stopTimer();
     return;
   }
-
   if (!hasStarted.value) {
     timeInputMinutes.value = normalizeMinutes(timeInputMinutes.value);
     remainingSeconds.value = timeInputMinutes.value * 60;
   }
-
   hasStarted.value = true;
   isRunning.value = true;
   timerId = window.setInterval(() => {
@@ -94,9 +93,7 @@ const readImageFile = (file) => {
 
 const handleImageUpload = (event) => {
   const file = event.target.files?.[0];
-  if (file) {
-    readImageFile(file);
-  }
+  if (file) readImageFile(file);
   event.target.value = "";
 };
 
@@ -115,10 +112,7 @@ const handleQuestionPaste = (event) => {
 
 const autoResizeAnswer = () => {
   const element = answerTextarea.value;
-  if (!element) {
-    return;
-  }
-
+  if (!element) return;
   element.style.height = "auto";
   element.style.height = `${Math.max(element.scrollHeight, 300)}px`;
 };
@@ -132,12 +126,52 @@ const escapeHtml = (text) => {
     .replace(/'/g, "&#39;");
 };
 
+const cutText = () => {
+  const el = answerTextarea.value;
+  if (!el) return;
+  el.focus();
+  document.execCommand("cut");
+};
+
+const pasteText = async () => {
+  const el = answerTextarea.value;
+  if (!el) return;
+  try {
+    const text = await navigator.clipboard.readText();
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    answerText.value =
+      answerText.value.substring(0, start) +
+      text +
+      answerText.value.substring(end);
+    await nextTick();
+    el.selectionStart = el.selectionEnd = start + text.length;
+    el.focus();
+  } catch {
+    el.focus();
+    document.execCommand("paste");
+  }
+};
+
+const undoText = () => {
+  const el = answerTextarea.value;
+  if (!el) return;
+  el.focus();
+  document.execCommand("undo");
+};
+
+const redoText = () => {
+  const el = answerTextarea.value;
+  if (!el) return;
+  el.focus();
+  document.execCommand("redo");
+};
+
 const exportAndCopy = async () => {
   if (!answerText.value.trim()) {
     window.alert("内容为空！");
     return;
   }
-
   try {
     await navigator.clipboard.writeText(answerText.value);
     window.alert("✅ 内容已自动复制！\n\n请点击下方紫色按钮去豆包直接粘贴。");
@@ -176,76 +210,103 @@ watch(answerText, async () => {
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <div class="timer-controls">
-        <label for="timeInput">设置时间(分钟):</label>
+  <div class="exam-wrapper">
+    <!-- Header bar -->
+    <div class="exam-header">
+      <span class="exam-title">小智写作练习室</span>
+      <div class="timer-area">
+        <span
+          class="timer-display"
+          :class="{
+            'timer-warning': remainingSeconds > 0 && remainingSeconds <= 60,
+            'timer-overtime': remainingSeconds < 0,
+          }"
+        >{{ formattedTimer }}</span>
+        <label class="sr-only" for="timeInput">分钟</label>
         <input
           id="timeInput"
           v-model.number="timeInputMinutes"
           type="number"
           min="1"
+          class="time-input"
           :disabled="isRunning"
         >
-        <button class="btn-start" @click="toggleTimer">{{ startButtonText }}</button>
-        <button class="btn-reset" @click="resetTimer">重置</button>
-      </div>
-
-      <div
-        class="timer-display"
-        :class="{
-          'timer-warning': remainingSeconds > 0 && remainingSeconds <= 60,
-          'timer-overtime': remainingSeconds < 0
-        }"
-      >
-        {{ formattedTimer }}
+        <span class="time-label">min</span>
+        <button class="header-btn btn-start" @click="toggleTimer">{{ startButtonText }}</button>
+        <button class="header-btn btn-reset" @click="resetTimer">Reset</button>
       </div>
     </div>
 
-    <div class="section-title">
-      <span>题目栏 (支持截图 Ctrl+V 或选图片)</span>
-      <div class="upload-btn-wrapper">
-        <label for="imgUpload" class="upload-label">📂 选图片文件</label>
-        <input
-          id="imgUpload"
-          type="file"
-          accept="image/*"
-          class="sr-only"
-          @change="handleImageUpload"
-        >
+    <!-- Two-column body -->
+    <div class="exam-body">
+      <!-- Left: Question panel -->
+      <div class="question-panel">
+        <div class="question-inner">
+          <textarea
+            v-model="questionText"
+            class="question-textarea"
+            placeholder="Paste the question here, or Ctrl+V to paste a screenshot..."
+            @paste="handleQuestionPaste"
+          ></textarea>
+          <img v-if="imagePreview" :src="imagePreview" class="image-preview" alt="Question image">
+        </div>
+        <div class="question-upload">
+          <label for="imgUpload" class="upload-label">Browse image...</label>
+          <input
+            id="imgUpload"
+            type="file"
+            accept="image/*"
+            class="sr-only"
+            @change="handleImageUpload"
+          >
+        </div>
       </div>
-    </div>
 
-    <div class="question-area">
-      <textarea
-        v-model="questionText"
-        class="question-input"
-        rows="2"
-        placeholder="在此粘贴题目文本，或 Ctrl+V 粘贴截图..."
-        @paste="handleQuestionPaste"
-      ></textarea>
-      <img v-if="imagePreview" :src="imagePreview" class="image-preview" alt="题目图片">
-    </div>
+      <!-- Right: Response panel -->
+      <div class="response-panel">
+        <div class="response-header">
+          <strong>Your Response:</strong>
+        </div>
 
-    <div class="section-title">作答区 (下载后自动复制作文)</div>
-    <div class="answer-area">
-      <textarea
-        ref="answerTextarea"
-        v-model="answerText"
-        class="answer-input"
-        placeholder="开始你的写作..."
-      ></textarea>
-      <div class="footer-controls">
-        <div class="word-count">当前字数: <span>{{ wordCount }}</span></div>
-        <button class="btn-submit" @click="exportAndCopy">📥 提交并下载文档 (自动复制)</button>
-        <a
-          href="https://doubao.com/bot/vy4SxUh5"
-          target="_blank"
-          rel="noreferrer"
-          class="btn-ai"
-        >
-          🤖 去豆包 AI 自动批改
-        </a>
+        <div class="response-meta">
+          <div class="meta-row">
+            <span class="meta-label">To:</span>
+            <input v-model="toField" class="meta-input" type="text" placeholder="Recipient">
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Subject:</span>
+            <input v-model="subjectField" class="meta-input" type="text" placeholder="Subject">
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button class="toolbar-btn toolbar-btn-dark" @click="cutText">Cut</button>
+          <button class="toolbar-btn" @click="pasteText">Paste</button>
+          <button class="toolbar-btn" @click="undoText">Undo</button>
+          <button class="toolbar-btn" @click="redoText">Redo</button>
+          <div class="toolbar-spacer"></div>
+          <button class="toolbar-btn toolbar-btn-muted" @click="showWordCount = !showWordCount">
+            {{ showWordCount ? "Hide Word Count" : "Show Word Count" }}
+          </button>
+          <span v-if="showWordCount" class="word-count-display">{{ wordCount }}</span>
+        </div>
+
+        <textarea
+          ref="answerTextarea"
+          v-model="answerText"
+          class="answer-textarea"
+          placeholder="Begin writing here..."
+        ></textarea>
+
+        <div class="response-footer">
+          <button class="footer-btn btn-export" @click="exportAndCopy">Download .doc</button>
+          <a
+            href="https://doubao.com/bot/vy4SxUh5"
+            target="_blank"
+            rel="noreferrer"
+            class="footer-btn btn-ai"
+          >AI 批改 (Doubao)</a>
+        </div>
       </div>
     </div>
   </div>
