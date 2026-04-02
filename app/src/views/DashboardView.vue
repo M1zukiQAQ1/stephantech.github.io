@@ -124,6 +124,64 @@ const deleteCode = async (c) => {
   }
 };
 
+// ── Markdown renderer ──
+const renderMarkdown = (text) => {
+  if (!text) return "";
+  const processInline = (s) =>
+    s
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  const lines = text.split("\n");
+  const parts = [];
+  let inList = false;
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith("* ") || t.startsWith("- ")) {
+      if (!inList) { parts.push("<ul>"); inList = true; }
+      parts.push(`<li>${processInline(t.slice(2))}</li>`);
+    } else {
+      if (inList) { parts.push("</ul>"); inList = false; }
+      if (t === "") parts.push('<div class="md-gap"></div>');
+      else parts.push(`<p>${processInline(t)}</p>`);
+    }
+  }
+  if (inList) parts.push("</ul>");
+  return parts.join("");
+};
+
+// ── Download submission ──
+const escapeHtml = (text = "") =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+const downloadSubmission = (s) => {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const ts = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const safeName = (s.studentName || "Student").replace(/[\\/:*?"<>|]/g, "_");
+  const safeSubject = (s.subjectField || "").replace(/[\\/:*?"<>|]/g, "_");
+  const filename = safeSubject
+    ? `${safeName}_${safeSubject}_${ts}.doc`
+    : `${safeName}_${ts}.doc`;
+
+  const html = `<html><meta charset="utf-8"><body>
+    <h2 style="color:#4a90e2;">TOEFL Practice Report</h2>
+    <p><b>Student:</b> ${escapeHtml(s.studentName)}</p>
+    <p><b>To:</b> ${escapeHtml(s.toField || "—")} &nbsp;&nbsp; <b>Subject:</b> ${escapeHtml(s.subjectField || "—")}</p>
+    <p><b>Word Count:</b> ${s.wordCount ?? "—"} &nbsp;&nbsp; <b>Time Used:</b> ${formatTime(s.timeUsedSeconds)}</p>
+    <p><b>Submitted:</b> ${formatDate(s.submittedAt)}</p>
+    ${s.question ? `<hr><h3>Question:</h3><p>${escapeHtml(s.question).replace(/\n/g,"<br>")}</p>` : ""}
+    <hr><h3>Student Response:</h3><p>${escapeHtml(s.answer).replace(/\n/g,"<br>")}</p>
+  </body></html>`;
+
+  const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+};
+
 // ── Formatters ──
 const formatDate = (ts) => {
   if (!ts?.toDate) return "—";
@@ -252,30 +310,43 @@ const formatTime = (seconds) => {
     </template>
   </div>
 
-  <!-- Detail modal -->
-  <div v-if="selected" class="modal-overlay" @click.self="selected = null">
-    <div class="modal-box detail-modal">
-      <div class="detail-header">
-        <div>
-          <div class="detail-student">{{ selected.studentName }}</div>
-          <div class="detail-meta">
-            To: {{ selected.toField || "—" }} &nbsp;|&nbsp;
-            Subject: {{ selected.subjectField || "—" }} &nbsp;|&nbsp;
-            {{ selected.wordCount }} 词 &nbsp;|&nbsp;
-            用时 {{ formatTime(selected.timeUsedSeconds) }} &nbsp;|&nbsp;
-            {{ formatDate(selected.submittedAt) }}
-          </div>
+  <!-- Detail panel (fullscreen) -->
+  <div v-if="selected" class="detail-overlay">
+    <div class="detail-panel">
+
+      <!-- Top bar -->
+      <div class="detail-topbar">
+        <div class="detail-topbar-left">
+          <span class="detail-student">{{ selected.studentName }}</span>
+          <span class="detail-topbar-sep">|</span>
+          <span class="detail-topbar-meta">To: {{ selected.toField || "—" }}</span>
+          <span class="detail-topbar-sep">|</span>
+          <span class="detail-topbar-meta">Subject: {{ selected.subjectField || "—" }}</span>
+          <span class="detail-topbar-sep">|</span>
+          <span class="detail-topbar-meta">{{ selected.wordCount }} 词</span>
+          <span class="detail-topbar-sep">|</span>
+          <span class="detail-topbar-meta">用时 {{ formatTime(selected.timeUsedSeconds) }}</span>
+          <span class="detail-topbar-sep">|</span>
+          <span class="detail-topbar-meta">{{ formatDate(selected.submittedAt) }}</span>
         </div>
-        <button class="detail-close" @click="selected = null">✕</button>
+        <div class="detail-topbar-right">
+          <button class="detail-download-btn" @click="downloadSubmission(selected)">Download .doc</button>
+          <button class="detail-close-btn" @click="selected = null">✕ 关闭</button>
+        </div>
       </div>
-      <div v-if="selected.question" class="detail-section">
-        <div class="detail-section-title">题目</div>
-        <div class="detail-question">{{ selected.question }}</div>
+
+      <!-- Two-column body: question left, answer right -->
+      <div class="detail-body">
+        <div v-if="selected.question" class="detail-col detail-col-question">
+          <div class="detail-col-title">题目</div>
+          <div class="detail-question-text" v-html="renderMarkdown(selected.question)"></div>
+        </div>
+        <div class="detail-col detail-col-answer" :class="{ 'detail-col-full': !selected.question }">
+          <div class="detail-col-title">学生作答</div>
+          <div class="detail-answer-text">{{ selected.answer }}</div>
+        </div>
       </div>
-      <div class="detail-section">
-        <div class="detail-section-title">学生作答</div>
-        <div class="detail-answer">{{ selected.answer }}</div>
-      </div>
+
     </div>
   </div>
 </template>
