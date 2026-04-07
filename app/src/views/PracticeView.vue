@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../composables/useAuth";
@@ -13,6 +13,26 @@ const currentScreen = ref("start"); // 'start' | 'ai-setup' | 'exam'
 const examState = ref("idle");
 const startTime = ref(null);
 
+// ── Timer ──
+const timerMinutes = ref(10); // user-adjustable duration
+const timerSeconds = ref(0);  // countdown seconds remaining
+const timeIsUp = ref(false);
+let timerInterval = null;
+
+const formattedTimer = computed(() => {
+  const m = Math.floor(timerSeconds.value / 60);
+  const s = timerSeconds.value % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+});
+
+const timerWarning = computed(() => timerSeconds.value <= 60 && timerSeconds.value > 0 && examState.value === "running");
+
+const stopTimer = () => {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+};
+
+onUnmounted(stopTimer);
+
 // ── Content ──
 const questionText = ref("");
 const answerText = ref("");
@@ -21,6 +41,7 @@ const answerTextarea = ref(null);
 const toField = ref("");
 const subjectField = ref("");
 const showWordCount = ref(true);
+const showTimer = ref(true);
 
 // ── Modals ──
 const showAiWarning = ref(false);
@@ -65,18 +86,6 @@ const wordCount = computed(() => {
   return text ? text.split(/\s+/).length : 0;
 });
 
-const timeUsedSeconds = computed(() => {
-  if (!startTime.value) return 0;
-  return Math.round((Date.now() - startTime.value) / 1000);
-});
-
-const formattedTimeUsed = computed(() => {
-  const s = timeUsedSeconds.value;
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-});
-
 // ── Helpers ──
 const extractTag = (text, tag) => {
   const m = text.match(new RegExp(`\\[${tag}\\]([\\s\\S]*?)\\[\\/${tag}\\]`, "i"));
@@ -115,7 +124,18 @@ const escapeHtml = (text) =>
 // ── Start practice ──
 const startPractice = () => {
   startTime.value = Date.now();
+  timerSeconds.value = timerMinutes.value * 60;
+  timeIsUp.value = false;
   examState.value = "running";
+  timerInterval = setInterval(() => {
+    if (timerSeconds.value > 0) {
+      timerSeconds.value--;
+    } else {
+      stopTimer();
+      timeIsUp.value = true;
+      autoSubmit();
+    }
+  }, 1000);
   if (document.documentElement.requestFullscreen)
     document.documentElement.requestFullscreen().catch(() => {});
 };
@@ -202,12 +222,8 @@ const confirmAiGrading = async () => {
 };
 
 // ── Submit ──
-const triggerSubmit = () => {
-  if (!answerText.value.trim()) { window.alert("内容为空！"); return; }
-  showSubmitConfirm.value = true;
-};
-const confirmSubmit = async () => {
-  showSubmitConfirm.value = false;
+const autoSubmit = async () => {
+  if (guestMode.value || !answerText.value.trim()) return;
   submitLoading.value = true;
   try {
     await addDoc(collection(db, "submissions"), {
@@ -219,7 +235,37 @@ const confirmSubmit = async () => {
       subjectField: subjectField.value,
       answer: answerText.value,
       wordCount: wordCount.value,
-      timeUsedSeconds: timeUsedSeconds.value,
+      timeUsedSeconds: timerMinutes.value * 60,
+      aiGenerated: aiGeneratedFields.value,
+      submittedAt: serverTimestamp(),
+    });
+    examState.value = "submitted";
+  } catch {
+    window.alert("自动提交失败，请手动提交。");
+  } finally {
+    submitLoading.value = false;
+  }
+};
+
+const triggerSubmit = () => {
+  if (!answerText.value.trim()) { window.alert("内容为空！"); return; }
+  showSubmitConfirm.value = true;
+};
+const confirmSubmit = async () => {
+  showSubmitConfirm.value = false;
+  submitLoading.value = true;
+  try {
+    stopTimer();
+    await addDoc(collection(db, "submissions"), {
+      studentId: user.value.uid,
+      studentName: userProfile.value?.name || user.value.email,
+      teacherId: userProfile.value?.teacherId || null,
+      question: questionText.value,
+      toField: toField.value,
+      subjectField: subjectField.value,
+      answer: answerText.value,
+      wordCount: wordCount.value,
+      timeUsedSeconds: timerMinutes.value * 60 - timerSeconds.value,
       aiGenerated: aiGeneratedFields.value,
       submittedAt: serverTimestamp(),
     });
@@ -233,6 +279,10 @@ const confirmSubmit = async () => {
 
 // ── New practice ──
 const newPractice = () => {
+  stopTimer();
+  timerSeconds.value = 0;
+  timeIsUp.value = false;
+  showTimer.value = true;
   examState.value = "idle";
   startTime.value = null;
   currentScreen.value = "start";
@@ -357,6 +407,17 @@ watch(answerText, async () => { await nextTick(); autoResizeAnswer(); });
       <div class="response-panel">
         <!-- Pre-start overlay -->
         <div v-if="examState === 'idle'" class="exam-start-overlay">
+          <div class="timer-setup">
+            <label class="timer-setup-label">限时</label>
+            <input
+              v-model.number="timerMinutes"
+              class="timer-setup-input"
+              type="number"
+              min="1"
+              max="120"
+            >
+            <span class="timer-setup-unit">分钟</span>
+          </div>
           <button class="exam-start-btn" @click="startPractice">开始练习</button>
           <p class="exam-start-hint">点击后进入全屏模拟考试环境</p>
         </div>
@@ -395,11 +456,19 @@ watch(answerText, async () => { await nextTick(); autoResizeAnswer(); });
             <button class="toolbar-btn" :disabled="examState === 'submitted'" @click="undoText">Undo</button>
             <button class="toolbar-btn" :disabled="examState === 'submitted'" @click="redoText">Redo</button>
             <div class="toolbar-spacer"></div>
+            <span v-if="showTimer" class="timer-display" :class="{ 'timer-warning': timerWarning, 'timer-done': examState === 'submitted' || timeIsUp }">
+              {{ timeIsUp ? "⏰ 00:00" : `⏱ ${formattedTimer}` }}
+            </span>
+            <button class="toolbar-btn toolbar-btn-muted" @click="showTimer = !showTimer">
+              {{ showTimer ? "Hide Timer" : "Show Timer" }}
+            </button>
             <button class="toolbar-btn toolbar-btn-muted" @click="showWordCount = !showWordCount">
               {{ showWordCount ? "Hide Word Count" : "Show Word Count" }}
             </button>
             <span v-if="showWordCount" class="word-count-display">{{ wordCount }}</span>
           </div>
+
+          <div v-if="timeIsUp" class="timesup-banner">⏰ 时间到！请提交作答。</div>
 
           <textarea
             ref="answerTextarea"
@@ -430,7 +499,7 @@ watch(answerText, async () => { await nextTick(); autoResizeAnswer(); });
     <div class="completion-card">
       <div class="completion-icon">🎉</div>
       <h2 class="completion-title">练习完成！</h2>
-      <p class="completion-stats">共写 <strong>{{ wordCount }}</strong> 词 &nbsp;·&nbsp; 用时 <strong>{{ formattedTimeUsed }}</strong></p>
+      <p class="completion-stats">共写 <strong>{{ wordCount }}</strong> 词 &nbsp;·&nbsp; 用时 <strong>{{ formattedTimer }}</strong></p>
       <div class="completion-actions">
         <button class="completion-btn completion-btn-download" @click="showDownloadConfirm = true">Download .doc</button>
         <button class="completion-btn completion-btn-ai" @click="showAiWarning = true">AI 批改 (豆包)</button>

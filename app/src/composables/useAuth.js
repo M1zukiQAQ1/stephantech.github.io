@@ -5,6 +5,10 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
+  sendPasswordResetEmail,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from "firebase/auth";
 import {
   doc,
@@ -113,5 +117,15 @@ export const useAuth = () => {
     await signOut(auth);
   };
 
-  return { user, userProfile, authReady, guestMode, login, register, continueAsGuest, logout };
+  const resetPassword = async (email) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    const credential = EmailAuthProvider.credential(user.value.email, currentPassword);
+    await reauthenticateWithCredential(user.value, credential);
+    await updatePassword(user.value, newPassword);
+  };
+
+  return { user, userProfile, authReady, guestMode, login, register, continueAsGuest, logout, resetPassword, changePassword };
 };
