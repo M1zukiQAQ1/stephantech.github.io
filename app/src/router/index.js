@@ -4,7 +4,11 @@ import { user, userProfile, guestMode, authReadyPromise } from "../composables/u
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: "/", redirect: "/practice" },
+    {
+      path: "/",
+      component: () => import("../views/WelcomeView.vue"),
+      meta: { public: true },
+    },
     {
       path: "/login",
       component: () => import("../views/LoginView.vue"),
@@ -30,10 +34,10 @@ router.beforeEach(async (to) => {
   const isGuest = guestMode.value;
   const isTeacher = userProfile.value?.role === "teacher";
 
-  // "/" root — send to appropriate home
+  // "/" welcome — redirect logged-in users to their home
   if (to.path === "/") {
-    if (!loggedIn && !isGuest) return "/login";
-    return isTeacher ? "/dashboard" : "/practice";
+    if (loggedIn || isGuest) return isTeacher ? "/dashboard" : "/practice";
+    return; // show welcome page for unauthenticated visitors
   }
 
   if (to.meta.requiresAuth && !loggedIn && !isGuest) return "/login";
